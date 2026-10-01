@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  # Branche de tetra-kit à construire avec le service ; repasser à main une fois
+  # SCourmaceul/tetra-kit#2 fusionnée (voir BACKLOG : version publiée de tetra-kit)
+  TETRA_KIT_REF: feat/1-init
+
+jobs:
+  go:
+    name: Go (vet, tests, build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tessera-users
+    steps:
+      # go.mod remplace tetra-kit par ../tetra-kit : les deux dépôts sont extraits côte à côte
+      - uses: actions/checkout@v7
+        with:
+          path: tessera-users
+
+      - name: Vérifie l'accès à tetra-kit
+        working-directory: .
+        env:
+          TETRA_KIT_TOKEN: ${{ secrets.TETRA_KIT_TOKEN }}
+        run: |
+          if [ -z "$TETRA_KIT_TOKEN" ]; then
+            echo "::error::Secret TETRA_KIT_TOKEN manquant : jeton avec accès en lecture (Contents) à SCourmaceul/tetra-kit"
+            exit 1
+          fi
+
+      - uses: actions/checkout@v7
+        with:
+          repository: SCourmaceul/tetra-kit
+          ref: ${{ env.TETRA_KIT_REF }}
+          token: ${{ secrets.TETRA_KIT_TOKEN }}
+          path: tetra-kit
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: tessera-users/go.mod
+          cache-dependency-path: tessera-users/go.sum
+
+      - name: gofmt
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "::error::Fichiers non formatés (make fmt) :"
+            echo "$unformatted"
+            exit 1
+          fi
+
+      - run: go mod verify
+      - run: make vet
+      - run: make test
+      - run: make build
+
+  terraform:
+    name: Terraform (fmt, validate)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: terraform
+    steps:
+      - uses: actions/checkout@v7
+      - uses: hashicorp/setup-terraform@v4
+      - run: terraform fmt -check -diff
+      - run: terraform init -backend=false
+      - run: terraform validate

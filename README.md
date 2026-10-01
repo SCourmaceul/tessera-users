@@ -66,4 +66,4 @@ make deploy ADMIN_TOKEN=…   # terraform apply sur LocalStack + rechargement du
 
 Prérequis du déploiement local : LocalStack lancé, Terraform de `tetra-gateway` appliqué (table `tetra-gateway-routes`), gateway démarrée pour `reload-routes`. Le topic SNS `tetra-events` n'est encore créé par aucun repo : `events_topic_arn` pointe vers son ARN LocalStack attendu.
 
-`tetra-kit` est résolu par une directive `replace` vers `../tetra-kit` (dépôt privé, pas encore de version publiée) : cloner les deux dépôts côte à côte.
+`tetra-kit` est résolu par une directive `replace` vers `../tetra-kit` (dépôt privé, pas encore de version publiée) : cloner les deux dépôts côte à côte. La CI (`.github/workflows/ci.yml`) fait de même et a besoin du secret `TETRA_KIT_TOKEN`, un jeton avec accès en lecture à `tetra-kit`.
